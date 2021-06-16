@@ -20,13 +20,17 @@ class PmtgEnv(gym.Env):
         self.steps = steps
         self.step_size = 2 * np.pi / (steps - 1)
         self.with_timer = with_timer
+        if with_timer:
+            obslen = 3
+        else:
+            obslen = 2
         self.with_pmtg = with_pmtg
 
         self.tg = TrajGen(steps)
 
         # print(np.around(self.data[:], 2))
         self.action_space = gym.spaces.Box(-1, 1, (2,), dtype=np.float32)
-        self.observation_space = gym.spaces.Box(-1, 1, (3,))
+        self.observation_space = gym.spaces.Box(-1, 1, (obslen,), dtype=np.float32)
 
         self.counter = 0
         self.data_base = []
@@ -72,7 +76,7 @@ class PmtgEnv(gym.Env):
             self.action_xy = action
         self.data_user.append(self.action_xy)
 
-        rew = norm((self.last_trgt[0] - self.action_xy[0], self.last_trgt[1] - self.action_xy[1]))
+        rew = -norm((self.last_trgt[0] - self.action_xy[0], self.last_trgt[1] - self.action_xy[1]))
 
         self.counter += 1
         self.last_obs = self.tg.get_next_point(self.counter, A, B)
@@ -93,10 +97,11 @@ class PmtgEnv(gym.Env):
         return obs, rew, done, {}
 
     def _draw_circle(self, center, radius, color):
-        x_min = max(0, center[0] - radius)
-        x_max = min(RES, center[0] + radius)
-        y_min = max(0, center[1] - radius)
-        y_max = min(RES, center[1] + radius)
+        x_min = np.clip(max(0, center[0] - radius), 0, RES)
+        x_max = np.clip(min(RES, center[0] + radius), 0, RES)
+        y_min = np.clip(max(0, center[1] - radius), 0, RES)
+        y_max = np.clip(min(RES, center[1] + radius), 0, RES)
+
         self.img[y_min:y_max, x_min:x_max, 0] += color[0]
         self.img[y_min:y_max, x_min:x_max, 1] += color[1]
         self.img[y_min:y_max, x_min:x_max, 2] += color[2]
@@ -128,7 +133,8 @@ if __name__ == "__main__":
     env.render()
     while True:
         # obs, rew, done, misc = env.step([0.5, 0.5])
-        obs, rew, done, misc = env.step([0.9, 1])
+        # obs, rew, done, misc = env.step([0.9, 1])
+        obs, rew, done, misc = env.step([1, 1])
         print(obs, rew, done)
         env.render()
         if done:
